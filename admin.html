@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>관리자 페이지</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<style>
+  body {
+    font-family: "Pretendard", sans-serif;
+    text-align: center;
+    background: #fafafa;
+  }
+  table {
+    margin: 20px auto;
+    border-collapse: collapse;
+    width: 60%;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+  }
+  th {
+    background: #4facfe;
+    color: white;
+  }
+</style>
+</head>
+<body>
+  <h1>🧾 관리자 페이지</h1>
+  <div id="loginArea">
+    <input type="password" id="adminPass" placeholder="비밀번호 입력" />
+    <button id="loginBtn">로그인</button>
+  </div>
+
+  <div id="dataArea" style="display:none;">
+    <h2>📊 플레이어 포인트 현황</h2>
+    <table>
+      <thead>
+        <tr><th>닉네임</th><th>포인트</th></tr>
+      </thead>
+      <tbody id="playerList"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // 🔹 Firebase 설정
+    const firebaseConfig = {
+      databaseURL: "https://<YOUR_PROJECT>.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const loginArea = document.getElementById("loginArea");
+    const dataArea = document.getElementById("dataArea");
+    const playerList = document.getElementById("playerList");
+    const loginBtn = document.getElementById("loginBtn");
+
+    loginBtn.addEventListener("click", () => {
+      const inputPass = document.getElementById("adminPass").value.trim();
+
+      db.ref("admin/password").once("value").then(snapshot => {
+        const realPass = snapshot.val();
+        if (inputPass === realPass) {
+          alert("관리자 로그인 성공!");
+          loginArea.style.display = "none";
+          dataArea.style.display = "block";
+          loadPlayerData();
+        } else {
+          alert("비밀번호가 올바르지 않습니다.");
+        }
+      });
+    });
+
+    function loadPlayerData() {
+      db.ref("plays").on("value", (snapshot) => {
+        const data = snapshot.val();
+        playerList.innerHTML = "";
+        for (let name in data) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${name}</td><td>${data[name].points}</td>`;
+          playerList.appendChild(tr);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
