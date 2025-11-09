@@ -1,87 +1,94 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>관리자 페이지</title>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<style>
-  body {
-    font-family: "Pretendard", sans-serif;
-    text-align: center;
-    background: #fafafa;
-  }
-  table {
-    margin: 20px auto;
-    border-collapse: collapse;
-    width: 60%;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 10px;
-  }
-  th {
-    background: #4facfe;
-    color: white;
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>관리자 페이지</title>
+  <style>
+    body {
+      font-family: "Pretendard", sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+      padding-top: 80px;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4facfe;
+      color: white;
+      cursor: pointer;
+    }
+    table {
+      margin: 40px auto;
+      border-collapse: collapse;
+      width: 60%;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>🧾 관리자 페이지</h1>
-  <div id="loginArea">
-    <input type="password" id="adminPass" placeholder="비밀번호 입력" />
-    <button id="loginBtn">로그인</button>
-  </div>
-
-  <div id="dataArea" style="display:none;">
-    <h2>📊 플레이어 포인트 현황</h2>
+  <h1>관리자 로그인</h1>
+  <input type="password" id="adminPass" placeholder="비밀번호 입력" />
+  <button id="loginBtn">로그인</button>
+  <div id="dataView" style="display:none;">
+    <h2>플레이어 포인트 목록</h2>
     <table>
-      <thead>
-        <tr><th>닉네임</th><th>포인트</th></tr>
-      </thead>
-      <tbody id="playerList"></tbody>
+      <thead><tr><th>닉네임</th><th>포인트</th></tr></thead>
+      <tbody id="tableBody"></tbody>
     </table>
   </div>
 
-  <script>
-    // 🔹 Firebase 설정
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
     const firebaseConfig = {
-      databaseURL: "https://<YOUR_PROJECT>.asia-southeast1.firebasedatabase.app/"
+      databaseURL: "https://clicker-dc943-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    const loginArea = document.getElementById("loginArea");
-    const dataArea = document.getElementById("dataArea");
-    const playerList = document.getElementById("playerList");
     const loginBtn = document.getElementById("loginBtn");
+    const adminPass = document.getElementById("adminPass");
+    const dataView = document.getElementById("dataView");
+    const tableBody = document.getElementById("tableBody");
 
-    loginBtn.addEventListener("click", () => {
-      const inputPass = document.getElementById("adminPass").value.trim();
-
-      db.ref("admin/password").once("value").then(snapshot => {
-        const realPass = snapshot.val();
-        if (inputPass === realPass) {
-          alert("관리자 로그인 성공!");
-          loginArea.style.display = "none";
-          dataArea.style.display = "block";
-          loadPlayerData();
-        } else {
-          alert("비밀번호가 올바르지 않습니다.");
-        }
-      });
+    loginBtn.addEventListener("click", async () => {
+      const pass = adminPass.value;
+      const passRef = ref(db, "admin/password");
+      const snapshot = await get(passRef);
+      if (snapshot.exists() && snapshot.val() === pass) {
+        dataView.style.display = "block";
+        adminPass.style.display = "none";
+        loginBtn.style.display = "none";
+        loadData();
+      } else {
+        alert("비밀번호가 틀렸습니다!");
+      }
     });
 
-    function loadPlayerData() {
-      db.ref("plays").on("value", (snapshot) => {
+    async function loadData() {
+      const playsRef = ref(db, "plays");
+      const snapshot = await get(playsRef);
+      tableBody.innerHTML = "";
+      if (snapshot.exists()) {
         const data = snapshot.val();
-        playerList.innerHTML = "";
-        for (let name in data) {
+        for (const name in data) {
           const tr = document.createElement("tr");
           tr.innerHTML = `<td>${name}</td><td>${data[name].points}</td>`;
-          playerList.appendChild(tr);
+          tableBody.appendChild(tr);
         }
-      });
+      }
     }
   </script>
 </body>
