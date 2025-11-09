@@ -1,130 +1,39 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>포인트 클릭커</title>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<style>
-  body {
-    font-family: "Pretendard", sans-serif;
-    text-align: center;
-    margin-top: 40px;
-    background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
-    color: #333;
-  }
-  #clickButton {
-    font-size: 28px;
-    padding: 20px 40px;
-    border: none;
-    border-radius: 20px;
-    background: #4facfe;
-    color: white;
-    cursor: pointer;
-    transition: transform 0.1s, background 0.3s;
-  }
-  #clickButton:active {
-    transform: scale(0.95);
-    background: #00f2fe;
-  }
-  #points {
-    font-size: 36px;
-    margin-top: 40px;
-  }
-  #shop {
-    margin-top: 40px;
-  }
-  button {
-    cursor: pointer;
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>클리커 게임 포털</title>
+  <style>
+    body {
+      font-family: "Pretendard", sans-serif;
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
+      text-align: center;
+      padding-top: 120px;
+    }
+    h1 {
+      font-size: 36px;
+      color: #333;
+      margin-bottom: 40px;
+    }
+    button {
+      font-size: 20px;
+      padding: 15px 40px;
+      margin: 20px;
+      border: none;
+      border-radius: 12px;
+      background-color: #ff7e5f;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #feb47b;
+    }
+  </style>
 </head>
 <body>
-  <h1>💎 포인트 클릭커 💎</h1>
-
-  <div>
-    <input id="playerName" placeholder="닉네임 입력" />
-    <button id="startBtn">시작</button>
-  </div>
-
-  <button id="clickButton" disabled>클릭!</button>
-  <div id="points">포인트: 0</div>
-
-  <div id="shop">
-    <h2>🛒 상점</h2>
-    <button id="buyBuff">💥 클릭 2배 (10초간 / 50P)</button>
-  </div>
-
-  <script>
-    // 🔹 Firebase 설정
-    const firebaseConfig = {
-      databaseURL: "https://<YOUR_PROJECT>.asia-southeast1.firebasedatabase.app/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // 🔹 변수
-    let player = null;
-    let points = 0;
-    let pointPerClick = 1;
-    let buffActive = false;
-
-    const clickButton = document.getElementById("clickButton");
-    const pointDisplay = document.getElementById("points");
-    const startBtn = document.getElementById("startBtn");
-    const playerNameInput = document.getElementById("playerName");
-    const buyBuffBtn = document.getElementById("buyBuff");
-
-    // 🔹 시작 버튼
-    startBtn.addEventListener("click", () => {
-      player = playerNameInput.value.trim();
-      if (!player) return alert("닉네임을 입력하세요!");
-      clickButton.disabled = false;
-      alert(`${player}님, 시작합니다!`);
-
-      // 기존 데이터 불러오기
-      db.ref("plays/" + player).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          points = snapshot.val().points || 0;
-        } else {
-          points = 0;
-        }
-        pointDisplay.textContent = `포인트: ${points}`;
-      });
-    });
-
-    // 🔹 클릭 시 포인트 증가
-    clickButton.addEventListener("click", () => {
-      if (!player) return;
-      points += pointPerClick;
-      updatePoints();
-    });
-
-    // 🔹 상점 - 버프 구매
-    buyBuffBtn.addEventListener("click", () => {
-      if (points < 50) return alert("포인트가 부족합니다!");
-      if (buffActive) return alert("이미 버프가 적용 중입니다!");
-
-      points -= 50;
-      updatePoints();
-
-      buffActive = true;
-      pointPerClick *= 2;
-      buyBuffBtn.textContent = "💥 버프 적용 중...";
-
-      setTimeout(() => {
-        pointPerClick /= 2;
-        buffActive = false;
-        buyBuffBtn.textContent = "💥 클릭 2배 (10초간 / 50P)";
-        alert("버프가 종료되었습니다!");
-      }, 10000);
-    });
-
-    // 🔹 DB에 업데이트
-    function updatePoints() {
-      pointDisplay.textContent = `포인트: ${points}`;
-      db.ref("plays/" + player).set({ points });
-    }
-  </script>
+  <h1>클리커 게임 포털</h1>
+  <button onclick="location.href='play.html'">🎮 플레이어</button>
+  <button onclick="location.href='admin.html'">🛠 관리자</button>
 </body>
 </html>
