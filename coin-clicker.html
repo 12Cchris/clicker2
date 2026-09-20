@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코인 클리커 v1.8</title>
+<style>
+  :root{
+    --bg: #1a1625;
+    --bg2: #241f35;
+    --card: #2c2640;
+    --card-hover: #362f4e;
+    --accent: #ffd24a;
+    --accent2: #ff9f4a;
+    --text: #f0ecff;
+    --text-dim: #a89fc2;
+    --green: #5ee8a0;
+    --disabled: #4a4460;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]){
+      --bg: #faf7ff;
+      --bg2: #f0ebfa;
+      --card: #ffffff;
+      --card-hover: #f4f0fc;
+      --text: #2a2340;
+      --text-dim: #6b6285;
+      --disabled: #d8d2ea;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #1a1625; --bg2:#241f35; --card:#2c2640; --card-hover:#362f4e;
+    --text:#f0ecff; --text-dim:#a89fc2; --disabled:#4a4460;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; min-height:100vh; background: linear-gradient(160deg, var(--bg), var(--bg2));
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; color: var(--text);
+    display:flex; flex-direction:column; align-items:center; padding: 24px 16px 60px;
+  }
+  h1{ font-size: 1.4rem; margin: 4px 0 2px; letter-spacing: 0.5px; }
+  .version{ font-size: 0.7rem; color: var(--text-dim); margin-bottom: 18px; }
+  .layout{ width:100%; max-width: 900px; display:flex; gap: 20px; flex-wrap: wrap; justify-content:center; }
+  .left, .right{ flex: 1 1 360px; min-width: 300px; }
+
+  .stat-bar{
+    background: var(--card); border-radius: 16px; padding: 16px 20px; margin-bottom: 16px;
+    text-align:center; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .coins{ font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .cps{ font-size: 0.85rem; color: var(--text-dim); margin-top:2px; }
+
+  .click-zone{
+    display:flex; flex-direction:column; align-items:center; margin: 10px 0 24px;
+  }
+  #coinBtn{
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--accent), var(--accent2));
+    border: none; cursor:pointer; font-size: 3rem;
+    box-shadow: 0 8px 0 #b8791f, 0 12px 20px rgba(0,0,0,0.3);
+    transition: transform 0.06s ease;
+    user-select:none;
+  }
+  #coinBtn:active{ transform: translateY(6px); box-shadow: 0 2px 0 #b8791f, 0 6px 10px rgba(0,0,0,0.3); }
+  .click-power{ margin-top:10px; font-size:0.85rem; color: var(--text-dim); }
+
+  .panel-title{ font-size: 0.95rem; font-weight:600; margin: 6px 0 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;}
+
+  .item{
+    display:flex; align-items:center; justify-content:space-between; gap: 10px;
+    background: var(--card); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+    cursor:pointer; border: 2px solid transparent; transition: all 0.12s ease;
+  }
+  .item:hover{ background: var(--card-hover); }
+  .item.disabled{ opacity:0.5; cursor:not-allowed; }
+  .item-info{ display:flex; flex-direction:column; gap:2px; }
+  .item-name{ font-weight:600; font-size:0.95rem; }
+  .item-desc{ font-size:0.75rem; color: var(--text-dim); }
+  .item-count{ font-size:0.75rem; color: var(--green); }
+  .item-price{ font-weight:700; color: var(--accent); font-size:0.9rem; white-space:nowrap; }
+
+  .floaty{
+    position:absolute; font-weight:700; color: var(--accent); pointer-events:none;
+    animation: floatUp 0.8s ease-out forwards; font-size: 1.1rem;
+  }
+  @keyframes floatUp{
+    0%{ opacity:1; transform: translateY(0); }
+    100%{ opacity:0; transform: translateY(-60px); }
+  }
+
+  .reset-btn{
+    margin-top: 20px; background:none; border: 1px solid var(--disabled); color: var(--text-dim);
+    padding: 8px 16px; border-radius: 10px; cursor:pointer; font-size: 0.8rem;
+  }
+  .reset-btn:hover{ border-color: var(--accent2); color: var(--accent2); }
+
+  .prestige-bar{
+    background: linear-gradient(135deg, #3a2d5c, #2c2640);
+    border: 1px solid #6b4fc7;
+    border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; text-align:center;
+  }
+  .prestige-points{ font-size: 1.1rem; font-weight:700; color: #c9a8ff; }
+  .prestige-mult{ font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+  .prestige-btn{
+    margin-top: 10px; width:100%; padding: 10px 12px; border-radius: 10px; border:none;
+    background: linear-gradient(135deg, #a874ff, #7b4fe0); color:#fff; font-weight:700;
+    cursor:pointer; font-size: 0.85rem;
+  }
+  .prestige-btn:disabled{ background: var(--disabled); color: var(--text-dim); cursor:not-allowed; }
+  .prestige-gain{ font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; }
+
+  .offline-banner{
+    background: linear-gradient(135deg, #2d5c3a, #264a30);
+    border: 1px solid #4fc77b; border-radius: 12px;
+    padding: 10px 16px; margin-bottom: 14px; text-align:center;
+    font-size: 0.85rem; color: #a8ffcb; font-weight:600;
+    display:none;
+  }
+
+  .synergy-note{ font-size: 0.7rem; color: #7dd8ff; margin-top: 2px; }
+
+  .achv-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .achv-card{
+    background: var(--card); border-radius: 12px; padding: 10px 12px;
+    border: 2px solid transparent; text-align:left; transition: all 0.15s ease;
+  }
+  .achv-card.unlocked{ border-color: var(--accent); }
+  .achv-card.locked{ opacity: 0.45; }
+  .achv-icon{ font-size: 1.3rem; }
+  .achv-name{ font-size: 0.82rem; font-weight:700; margin-top: 4px; }
+  .achv-desc{ font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
+  .achv-progress{ font-size: 0.68rem; color: var(--text-dim); margin-top: 12px; text-align:center; }
+
+  .achv-toast{
+    position: fixed; top: 16px; right: 16px; z-index: 999;
+    background: linear-gradient(135deg, #ffd24a, #ff9f4a); color: #3a2a00;
+    padding: 12px 18px; border-radius: 12px; font-weight:700; font-size: 0.85rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    transform: translateX(140%); transition: transform 0.35s ease;
+    max-width: 260px;
+  }
+  .achv-toast.show{ transform: translateX(0); }
+  .achv-toast .achv-toast-sub{ font-weight:400; font-size: 0.72rem; margin-top: 2px; }
+
+  .floaty.crit{ color:#ff5050; font-size:1.5rem; text-shadow: 0 0 10px rgba(255,80,80,0.7); }
+  .floaty.cost{ color:#ff8080; }
+
+  .crit-flash{
+    position: fixed; inset: 0; pointer-events:none; z-index: 400; opacity:0;
+    background: radial-gradient(circle, rgba(255,70,70,0.35), transparent 70%);
+  }
+  .crit-flash.active{ animation: critFlash 0.4s ease-out; }
+  @keyframes critFlash{
+    0%{ opacity:0; } 25%{ opacity:1; } 100%{ opacity:0; }
+  }
+
+  .purchase-pulse{
+    animation: purchasePulse 0.4s ease;
+  }
+  @keyframes purchasePulse{
+    0%{ box-shadow: 0 0 0 0 rgba(94,232,160,0.55); border-color: var(--green); transform: scale(1.02); }
+    100%{ box-shadow: 0 0 0 16px rgba(94,232,160,0); border-color: transparent; transform: scale(1); }
+  }
+
+  .sound-toggle{
+    position: fixed; top: 14px; right: 14px; z-index: 300;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--disabled); color: var(--text);
+    font-size: 1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .sound-toggle:hover{ border-color: var(--accent); }
+
+  .tab-bar{ display:flex; gap:8px; margin-bottom: 14px; }
+  .tab-btn{
+    flex:1; padding: 10px 8px; border-radius: 10px; border:1px solid var(--disabled);
+    background: var(--card); color: var(--text-dim); cursor:pointer;
+    font-weight:700; font-size: 0.85rem; transition: all 0.15s ease;
+  }
+  .tab-btn.active{
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color:#3a2a00; border-color: transparent;
+  }
+  .tab-panel{ display:none; max-height: 560px; overflow-y:auto; padding-right: 4px; }
+  .tab-panel.active{ display:block; }
+
+  .upgrade-subheader{
+    font-size: 0.7rem; font-weight:700; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 1px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--disabled);
+  }
+  .upgrade-subheader:first-child{ margin-top: 0; }
+
+  ::-webkit-scrollbar{ width: 6px; }
+  ::-webkit-scrollbar-thumb{ background: var(--disabled); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="crit-flash" id="critFlash"></div>
+<button class="sound-toggle" id="soundToggle" title="효과음 켜기/끄기">🔊</button>
+
+<h1>🪙 코인 클리커</h1>
+<div class="version">v1.8</div>
+
+<div class="layout">
+  <div class="left">
+    <div class="offline-banner" id="offlineBanner"></div>
+
+    <div class="stat-bar">
+      <div class="coins" id="coinDisplay">0 코인</div>
+      <div class="cps" id="cpsDisplay">초당 0 코인</div>
+    </div>
+
+    <div class="prestige-bar">
+      <div class="prestige-points" id="prestigePointsDisplay">환생 포인트: 0</div>
+      <div class="prestige-mult" id="prestigeMultDisplay">생산 배율 x1.00</div>
+      <button class="prestige-btn" id="prestigeBtn">환생하기</button>
+      <div class="prestige-gain" id="prestigeGainDisplay"></div>
+    </div>
+
+    <div class="click-zone" style="position:relative;">
+      <button id="coinBtn">🪙</button>
+      <div class="click-power" id="clickPowerDisplay">클릭당 +1</div>
+      <div class="click-power" id="critChanceDisplay">치명타 확률 5%</div>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">게임 초기화</button>
+  </div>
+
+  <div class="right">
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabUpgradesBtn">업그레이드</button>
+      <button class="tab-btn" id="tabAchvBtn">업적</button>
+    </div>
+
+    <div class="tab-panel active" id="tabUpgrades">
+      <div id="upgradeList"></div>
+    </div>
+
+    <div class="tab-panel" id="tabAchv">
+      <div class="achv-grid" id="achvGrid"></div>
+      <div class="achv-progress" id="achvProgress"></div>
+    </div>
+  </div>
+</div>
+
+<div class="achv-toast" id="achvToast">
+  <div id="achvToastTitle">🏆 업적 달성!</div>
+  <div class="achv-toast-sub" id="achvToastSub"></div>
+</div>
+
+<script>
+  // ---- 사운드 엔진 (Web Audio API, 외부 파일 없이 합성음) ----
+  const SOUND_KEY = 'coinClickerSoundOn';
+  let soundOn = true;
+  try{ const s = localStorage.getItem(SOUND_KEY); if(s !== null) soundOn = s === '1'; }catch(e){}
+
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ audioCtx = null; }
+    }
+    if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+  }
+
+  function playTone(freq, duration, type, volume, delay){
+    if(!soundOn) return;
+    ensureAudio();
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime + (delay || 0);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(volume || 0.1, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  function playClickSound(){ playTone(520, 0.05, 'square', 0.05); }
+  function playCritSound(){
+    playTone(700, 0.08, 'sawtooth', 0.09, 0);
+    playTone(1050, 0.1, 'sawtooth', 0.09, 0.06);
+  }
+  function playPurchaseSound(){
+    playTone(600, 0.06, 'triangle', 0.09, 0);
+    playTone(900, 0.09, 'triangle', 0.09, 0.05);
+  }
+  function playAchievementSound(){
+    [600, 800, 1000, 1300].forEach((f, i) => playTone(f, 0.12, 'triangle', 0.09, i*0.09));
+  }
+
+  const soundToggleBtn = document.getElementById('soundToggle');
+  soundToggleBtn.textContent = soundOn ? '🔊' : '🔇';
+  soundToggleBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundToggleBtn.textContent = soundOn ? '🔊' : '🔇';
+    try{ localStorage.setItem(SOUND_KEY, soundOn ? '1' : '0'); }catch(e){}
+    ensureAudio();
+  });
+
+  // ---- 탭 전환 (업그레이드 / 업적) ----
+  const tabUpgradesBtn = document.getElementById('tabUpgradesBtn');
+  const tabAchvBtn = document.getElementById('tabAchvBtn');
+  const tabUpgrades = document.getElementById('tabUpgrades');
+  const tabAchv = document.getElementById('tabAchv');
+
+  function switchTab(name){
+    const isUpgrades = name === 'upgrades';
+    tabUpgradesBtn.classList.toggle('active', isUpgrades);
+    tabAchvBtn.classList.toggle('active', !isUpgrades);
+    tabUpgrades.classList.toggle('active', isUpgrades);
+    tabAchv.classList.toggle('active', !isUpgrades);
+  }
+  tabUpgradesBtn.addEventListener('click', () => switchTab('upgrades'));
+  tabAchvBtn.addEventListener('click', () => switchTab('achievements'));
+
+  // ---- 크리티컬 클릭 ----
+  const CRIT_BASE_CHANCE = 0.05;   // 기본 5% 확률
+  const CRIT_CHANCE_CAP = 0.6;     // 최대 60%까지 누적 가능
+  const CRIT_MULTIPLIER = 6;       // 6배 코인
+
+  function getCritChance(){
+    const fromUpgrades = (state.owned.critUp1||0) * 0.01 + (state.owned.critUp2||0) * 0.02;
+    return Math.min(CRIT_CHANCE_CAP, CRIT_BASE_CHANCE + fromUpgrades);
+  }
+
+  function triggerCritFlash(){
+    const el = document.getElementById('critFlash');
+    el.classList.remove('active');
+    void el.offsetWidth; // 리플레이를 위한 강제 리플로우
+    el.classList.add('active');
+  }
+
+  // ---- 게임 데이터 ----
+  const SAVE_KEY = 'coinClickerSave_v1';
+
+  const upgradeDefs = [
+    { id:'cursor',   name:'커서',       desc:'초당 1 코인 생산',      baseCost:15,     baseCps:1,   type:'cps', category:'building' },
+    { id:'grandma',  name:'할머니',     desc:'초당 5 코인 생산',      baseCost:100,    baseCps:5,   type:'cps', category:'building' },
+    { id:'farm',     name:'농장',       desc:'초당 15 코인 생산',     baseCost:500,    baseCps:15,  type:'cps', category:'building' },
+    { id:'mine',     name:'광산',       desc:'초당 60 코인 생산',     baseCost:2500,   baseCps:60,  type:'cps', category:'building' },
+    { id:'factory',  name:'공장',       desc:'초당 200 코인 생산',    baseCost:12000,  baseCps:200, type:'cps', category:'building' },
+    { id:'bank',     name:'은행',       desc:'초당 800 코인 생산',    baseCost:60000,  baseCps:800, type:'cps', category:'building' },
+    { id:'temple',       name:'신전',        desc:'초당 3,000 코인 생산',    baseCost:300000,    baseCps:3000,   type:'cps', category:'building' },
+    { id:'wizardTower',  name:'마법사의 탑', desc:'초당 12,000 코인 생산',   baseCost:1500000,   baseCps:12000,  type:'cps', category:'building' },
+    { id:'spaceStation', name:'우주정거장',  desc:'초당 50,000 코인 생산',   baseCost:8000000,   baseCps:50000,  type:'cps', category:'building' },
+    { id:'timeMachine',  name:'타임머신',    desc:'초당 200,000 코인 생산',  baseCost:40000000,  baseCps:200000, type:'cps', category:'building' },
+    { id:'clickUp1', name:'튼튼한 장갑', desc:'클릭당 +1 코인',        baseCost:60,     click:1,     type:'click', once:false, category:'power' },
+    { id:'clickUp2', name:'황금 손가락', desc:'클릭당 +5 코인',        baseCost:1500,   click:5,     type:'click', once:false, category:'power' },
+    { id:'clickUp3', name:'미다스의 손', desc:'클릭당 +20 코인',       baseCost:25000,  click:20,    type:'click', once:false, category:'power' },
+    { id:'clickUp4', name:'용의 발톱',   desc:'클릭당 +80 코인',       baseCost:500000, click:80,    type:'click', once:false, category:'power' },
+    { id:'critUp1',  name:'행운의 동전', desc:'치명타 확률 +1%p',      baseCost:4000,   critChance:0.01, type:'crit', category:'luck' },
+    { id:'critUp2',  name:'네잎클로버',  desc:'치명타 확률 +2%p',      baseCost:300000, critChance:0.02, type:'crit', category:'luck' },
+  ];
+
+  const categoryLabels = { building:'🏗️ 생산 건물', power:'👊 클릭 강화', luck:'🍀 행운' };
+
+  // ---- 시너지: 특정 건물을 많이 보유하면 다른 건물의 생산량이 늘어남 ----
+  const synergyDefs = [
+    { targetId:'grandma',      sourceId:'farm',         sourceName:'농장',       perSource:5, bonusPerStep:0.05 },
+    { targetId:'mine',         sourceId:'factory',      sourceName:'공장',       perSource:5, bonusPerStep:0.05 },
+    { targetId:'bank',         sourceId:'mine',         sourceName:'광산',       perSource:5, bonusPerStep:0.05 },
+    { targetId:'temple',       sourceId:'bank',         sourceName:'은행',       perSource:5, bonusPerStep:0.05 },
+    { targetId:'wizardTower',  sourceId:'temple',       sourceName:'신전',       perSource:5, bonusPerStep:0.05 },
+    { targetId:'spaceStation', sourceId:'wizardTower',  sourceName:'마법사의 탑', perSource:5, bonusPerStep:0.05 },
+    { targetId:'timeMachine',  sourceId:'spaceStation', sourceName:'우주정거장', perSource:5, bonusPerStep:0.05 },
+  ];
+
+  function getSynergyMultiplier(targetId){
+    let mult = 1;
+    synergyDefs.filter(s => s.targetId === targetId).forEach(s => {
+      const steps = Math.floor((state.owned[s.sourceId] || 0) / s.perSource);
+      mult += steps * s.bonusPerStep;
+    });
+    return mult;
+  }
+
+  function getSynergyNote(targetId){
+    const defs = synergyDefs.filter(s => s.targetId === targetId);
+    if(defs.length === 0) return '';
+    return defs.map(s => `${s.sourceName} ${s.perSource}개당 +${Math.round(s.bonusPerStep*100)}%`).join(', ');
+  }
+
+  let state = {
+    coins: 0,
+    clickPower: 1,
+    owned: {},
+    totalEarned: 0,
+    prestigePoints: 0,
+    lastSeen: null,
+    totalClicks: 0,
+    achievements: {},
+    totalCrits: 0,
+  };
+
+  // ---- 업적: 달성 시 영구 생산 배율 +1%p ----
+  const achievementDefs = [
+    { id:'click_100',    icon:'👆', name:'클릭 견습생',   desc:'100번 클릭',                 check: s => s.totalClicks >= 100 },
+    { id:'click_1000',   icon:'✋', name:'클릭 장인',      desc:'1,000번 클릭',                check: s => s.totalClicks >= 1000 },
+    { id:'click_10000',  icon:'🤚', name:'클릭의 신',      desc:'10,000번 클릭',               check: s => s.totalClicks >= 10000 },
+    { id:'earn_1000',    icon:'🪙', name:'푼돈 모으기',    desc:'누적 1,000 코인 획득',         check: s => s.totalEarned >= 1000 },
+    { id:'earn_100000',  icon:'💰', name:'부자의 시작',    desc:'누적 100,000 코인 획득',       check: s => s.totalEarned >= 100000 },
+    { id:'earn_1000000', icon:'👑', name:'백만장자',       desc:'누적 1,000,000 코인 획득',     check: s => s.totalEarned >= 1000000 },
+    { id:'cursor_10',    icon:'🖱️', name:'커서 수집가',    desc:'커서 10개 보유',              check: s => (s.owned.cursor||0) >= 10 },
+    { id:'grandma_10',   icon:'👵', name:'할머니 부대',    desc:'할머니 10개 보유',            check: s => (s.owned.grandma||0) >= 10 },
+    { id:'bank_1',       icon:'🏦', name:'은행가',         desc:'은행 1개 보유',               check: s => (s.owned.bank||0) >= 1 },
+    { id:'bank_10',      icon:'🏛️', name:'금융 재벌',      desc:'은행 10개 보유',              check: s => (s.owned.bank||0) >= 10 },
+    { id:'temple_1',        icon:'⛩️', name:'경건한 신도',   desc:'신전 1개 보유',        check: s => (s.owned.temple||0) >= 1 },
+    { id:'timeMachine_1',   icon:'⏳', name:'시간 여행자',   desc:'타임머신 1개 보유',    check: s => (s.owned.timeMachine||0) >= 1 },
+    { id:'prestige_1',   icon:'🔄', name:'새로운 시작',    desc:'첫 환생 달성',                check: s => s.prestigePoints >= 1 },
+    { id:'prestige_10',  icon:'🌀', name:'윤회의 달인',    desc:'환생 포인트 10 달성',          check: s => s.prestigePoints >= 10 },
+    { id:'crit_1',       icon:'💥', name:'첫 치명타',      desc:'치명타 1회 발생',              check: s => (s.totalCrits||0) >= 1 },
+    { id:'crit_50',      icon:'🔥', name:'치명타 헌터',    desc:'치명타 50회 발생',             check: s => (s.totalCrits||0) >= 50 },
+    { id:'crit_500',     icon:'☄️', name:'행운의 화신',    desc:'치명타 500회 발생',            check: s => (s.totalCrits||0) >= 500 },
+  ];
+
+  function getAchievementMultiplier(){
+    return 1 + Object.keys(state.achievements).length * 0.01;
+  }
+
+  function getTotalMultiplier(){
+    return getPrestigeMultiplier() * getAchievementMultiplier();
+  }
+
+  function checkAchievements(){
+    let newlyUnlocked = null;
+    achievementDefs.forEach(a => {
+      if(!state.achievements[a.id] && a.check(state)){
+        state.achievements[a.id] = true;
+        newlyUnlocked = a;
+      }
+    });
+    if(newlyUnlocked) showAchievementToast(newlyUnlocked);
+  }
+
+  let toastTimer = null;
+  function showAchievementToast(a){
+    playAchievementSound();
+    const toast = document.getElementById('achvToast');
+    document.getElementById('achvToastTitle').textContent = `${a.icon} 업적 달성: ${a.name}`;
+    document.getElementById('achvToastSub').textContent = a.desc + ' · 생산 배율 +1%p';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+
+  function renderAchievements(){
+    const grid = document.getElementById('achvGrid');
+    grid.innerHTML = '';
+    let unlockedCount = 0;
+    achievementDefs.forEach(a => {
+      const unlocked = !!state.achievements[a.id];
+      if(unlocked) unlockedCount++;
+      const card = document.createElement('div');
+      card.className = 'achv-card ' + (unlocked ? 'unlocked' : 'locked');
+      card.innerHTML = `
+        <div class="achv-icon">${unlocked ? a.icon : '🔒'}</div>
+        <div class="achv-name">${a.name}</div>
+        <div class="achv-desc">${a.desc}</div>
+      `;
+      grid.appendChild(card);
+    });
+    document.getElementById('achvProgress').textContent =
+      `${unlockedCount} / ${achievementDefs.length} 달성 · 업적 생산 배율 x${getAchievementMultiplier().toFixed(2)}`;
+    document.getElementById('tabAchvBtn').textContent = `업적 (${unlockedCount}/${achievementDefs.length})`;
+  }
+
+  const OFFLINE_RATE = 0.5;           // 오프라인 동안 정상 생산의 50%만 인정
+  const OFFLINE_CAP_SECONDS = 8*3600; // 최대 8시간까지만 인정
+
+  const PRESTIGE_DIVISOR = 1000000; // 환생 포인트 계산 기준값 (신규 건물 추가로 상향 조정)
+
+  function getPrestigeMultiplier(){
+    return 1 + state.prestigePoints * 0.02;
+  }
+
+  function getPrestigeGain(){
+    return Math.floor(Math.sqrt(state.totalEarned / PRESTIGE_DIVISOR));
+  }
+
+  let storageOk = true;
+
+  function loadGame(){
+    try{
+      const saved = localStorage.getItem(SAVE_KEY);
+      if(saved){
+        const parsed = JSON.parse(saved);
+        state.coins = parsed.coins || 0;
+        state.clickPower = parsed.clickPower || 1;
+        state.owned = parsed.owned || {};
+        state.totalEarned = parsed.totalEarned || 0;
+        state.prestigePoints = parsed.prestigePoints || 0;
+        state.lastSeen = parsed.lastSeen || null;
+        state.totalClicks = parsed.totalClicks || 0;
+        state.achievements = parsed.achievements || {};
+        state.totalCrits = parsed.totalCrits || 0;
+      }
+    }catch(e){
+      storageOk = false;
+      console.warn('저장 데이터를 불러올 수 없습니다:', e);
+    }
+    upgradeDefs.forEach(u => { if(!(u.id in state.owned)) state.owned[u.id] = 0; });
+  }
+
+  function applyOfflineEarnings(){
+    if(!state.lastSeen) return;
+    const elapsedSec = Math.max(0, (Date.now() - state.lastSeen) / 1000);
+    if(elapsedSec < 30) return; // 30초 미만은 무시
+    const cappedSec = Math.min(elapsedSec, OFFLINE_CAP_SECONDS);
+    const cps = getTotalCps() * getTotalMultiplier();
+    const earned = cps * cappedSec * OFFLINE_RATE;
+    if(earned <= 0) return;
+    state.coins += earned;
+    state.totalEarned += earned;
+
+    const banner = document.getElementById('offlineBanner');
+    const capped = elapsedSec > OFFLINE_CAP_SECONDS;
+    banner.textContent = `🕒 자리를 비운 동안 ${formatNum(earned)} 코인을 벌었어요!` + (capped ? ' (최대 8시간까지만 인정)' : '');
+    banner.style.display = 'block';
+    setTimeout(() => { banner.style.display = 'none'; }, 6000);
+  }
+
+  function saveGame(){
+    try{
+      state.lastSeen = Date.now();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      storageOk = true;
+    }catch(e){
+      storageOk = false;
+      console.warn('저장에 실패했습니다:', e);
+    }
+  }
+
+  function getCost(def){
+    const count = state.owned[def.id] || 0;
+    return Math.floor(def.baseCost * Math.pow(1.15, count));
+  }
+
+  function getTotalCps(){
+    return upgradeDefs.filter(u => u.type==='cps')
+      .reduce((sum,u) => sum + u.baseCps * (state.owned[u.id]||0) * getSynergyMultiplier(u.id), 0);
+  }
+
+  function formatNum(n){
+    n = Math.floor(n);
+    if(n >= 1e9) return (n/1e9).toFixed(2)+'B';
+    if(n >= 1e6) return (n/1e6).toFixed(2)+'M';
+    if(n >= 1e3) return n.toLocaleString('ko-KR');
+    return n.toString();
+  }
+
+  const coinDisplay = document.getElementById('coinDisplay');
+  const cpsDisplay = document.getElementById('cpsDisplay');
+  const clickPowerDisplay = document.getElementById('clickPowerDisplay');
+  const upgradeList = document.getElementById('upgradeList');
+  const coinBtn = document.getElementById('coinBtn');
+
+  const prestigePointsDisplay = document.getElementById('prestigePointsDisplay');
+  const prestigeMultDisplay = document.getElementById('prestigeMultDisplay');
+  const prestigeBtn = document.getElementById('prestigeBtn');
+  const prestigeGainDisplay = document.getElementById('prestigeGainDisplay');
+
+  function render(){
+    const mult = getTotalMultiplier();
+    coinDisplay.textContent = formatNum(state.coins) + ' 코인';
+    cpsDisplay.textContent = '초당 ' + formatNum(getTotalCps() * mult) + ' 코인';
+    clickPowerDisplay.textContent = '클릭당 +' + formatNum(state.clickPower * mult);
+    document.getElementById('critChanceDisplay').textContent = '치명타 확률 ' + (getCritChance()*100).toFixed(1) + '% (x' + CRIT_MULTIPLIER + ')';
+
+    prestigePointsDisplay.textContent = '환생 포인트: ' + formatNum(state.prestigePoints);
+    prestigeMultDisplay.textContent = '생산 배율 x' + mult.toFixed(2) + ' (환생 x' + getPrestigeMultiplier().toFixed(2) + ' · 업적 x' + getAchievementMultiplier().toFixed(2) + ')';
+    const gain = getPrestigeGain();
+    prestigeBtn.disabled = gain < 1;
+    prestigeGainDisplay.textContent = gain >= 1
+      ? `환생 시 +${gain} 포인트 획득 (진행 상황은 초기화돼요)`
+      : `환생하려면 누적 코인이 더 필요해요 (${formatNum(state.totalEarned)} / ${formatNum(PRESTIGE_DIVISOR)})`;
+
+    upgradeList.innerHTML = '';
+    let lastCategory = null;
+    upgradeDefs.forEach(def => {
+      if(def.category !== lastCategory){
+        const header = document.createElement('div');
+        header.className = 'upgrade-subheader';
+        header.textContent = categoryLabels[def.category] || def.category;
+        upgradeList.appendChild(header);
+        lastCategory = def.category;
+      }
+
+      const cost = getCost(def);
+      const count = state.owned[def.id] || 0;
+      const affordable = state.coins >= cost;
+      const synergyNote = def.type === 'cps' ? getSynergyNote(def.id) : '';
+
+      const item = document.createElement('div');
+      item.className = 'item' + (affordable ? '' : ' disabled');
+      item.dataset.id = def.id;
+      item.innerHTML = `
+        <div class="item-info">
+          <div class="item-name">${def.name}</div>
+          <div class="item-desc">${def.desc}</div>
+          ${synergyNote ? `<div class="synergy-note">시너지: ${synergyNote}</div>` : ''}
+          <div class="item-count">보유: ${count}</div>
+        </div>
+        <div class="item-price">${formatNum(cost)} 🪙</div>
+      `;
+      item.addEventListener('click', (ev) => buyUpgrade(def, ev));
+      upgradeList.appendChild(item);
+    });
+
+    renderAchievements();
+  }
+
+  function buyUpgrade(def, ev){
+    const cost = getCost(def);
+    if(state.coins < cost) return;
+    state.coins -= cost;
+    state.owned[def.id] = (state.owned[def.id]||0) + 1;
+    if(def.type === 'click'){
+      state.clickPower += def.click;
+    }
+    checkAchievements();
+    render();
+    saveGame();
+
+    playPurchaseSound();
+    const el = upgradeList.querySelector(`[data-id="${def.id}"]`);
+    if(el){
+      el.classList.add('purchase-pulse');
+      setTimeout(() => el.classList.remove('purchase-pulse'), 400);
+    }
+    if(ev){
+      spawnFloaty(ev.clientX - 10, ev.clientY - 10, cost, 'cost');
+    }
+  }
+
+  function spawnFloaty(x, y, amount, kind){
+    const f = document.createElement('div');
+    f.className = 'floaty' + (kind === 'crit' ? ' crit' : kind === 'cost' ? ' cost' : '');
+    f.textContent = (kind === 'crit' ? '치명타! +' : kind === 'cost' ? '-' : '+') + formatNum(amount);
+    f.style.left = x + 'px';
+    f.style.top = y + 'px';
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 800);
+  }
+
+  coinBtn.addEventListener('click', (e) => {
+    const isCrit = Math.random() < getCritChance();
+    let gain = state.clickPower * getTotalMultiplier();
+    if(isCrit){
+      gain *= CRIT_MULTIPLIER;
+      state.totalCrits += 1;
+    }
+    state.coins += gain;
+    state.totalEarned += gain;
+    state.totalClicks += 1;
+    spawnFloaty(e.clientX - 10, e.clientY - 10, gain, isCrit ? 'crit' : null);
+    if(isCrit){
+      triggerCritFlash();
+      playCritSound();
+    }else{
+      playClickSound();
+    }
+    checkAchievements();
+    render();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(confirm('정말로 초기화하시겠습니까? 환생 포인트를 포함한 모든 진행 상황이 사라집니다.')){
+      state = { coins:0, clickPower:1, owned:{}, totalEarned:0, prestigePoints:0, totalClicks:0, achievements:{}, totalCrits:0 };
+      upgradeDefs.forEach(u => state.owned[u.id] = 0);
+      saveGame();
+      render();
+    }
+  });
+
+  prestigeBtn.addEventListener('click', () => {
+    const gain = getPrestigeGain();
+    if(gain < 1) return;
+    if(!confirm(`환생하면 코인과 업그레이드가 모두 초기화되고, 환생 포인트 +${gain}을 얻습니다 (누적 배율 상승). 진행하시겠습니까?`)) return;
+    state.prestigePoints += gain;
+    state.coins = 0;
+    state.clickPower = 1;
+    state.totalEarned = 0;
+    upgradeDefs.forEach(u => state.owned[u.id] = 0);
+    saveGame();
+    render();
+  });
+
+  // 자동 생산 루프 (100ms마다 갱신)
+  setInterval(() => {
+    const cps = getTotalCps() * getTotalMultiplier();
+    if(cps > 0){
+      const gained = cps / 10;
+      state.coins += gained;
+      state.totalEarned += gained;
+      coinDisplay.textContent = formatNum(state.coins) + ' 코인';
+      upgradeList.querySelectorAll('.item').forEach((el, i) => {
+        const def = upgradeDefs[i];
+        const cost = getCost(def);
+        el.classList.toggle('disabled', state.coins < cost);
+      });
+      const gain = getPrestigeGain();
+      prestigeBtn.disabled = gain < 1;
+      prestigeGainDisplay.textContent = gain >= 1
+        ? `환생 시 +${gain} 포인트 획득 (진행 상황은 초기화돼요)`
+        : `환생하려면 누적 코인이 더 필요해요 (${formatNum(state.totalEarned)} / ${formatNum(PRESTIGE_DIVISOR)})`;
+      checkAchievements();
+      renderAchievements();
+    }
+  }, 100);
+
+  // 3초마다 자동 저장
+  setInterval(saveGame, 3000);
+
+  // 탭을 벗어나거나 창을 닫을 때도 즉시 저장
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden') saveGame();
+  });
+  window.addEventListener('pagehide', saveGame);
+  window.addEventListener('beforeunload', saveGame);
+
+  loadGame();
+  applyOfflineEarnings();
+  render();
+  saveGame();
+
+  if(!storageOk){
+    alert('이 브라우저 환경에서는 저장 기능(localStorage)이 차단되어 있어 진행 상황이 유지되지 않을 수 있습니다. 파일을 다운로드한 뒤 일반 브라우저(Chrome, Edge 등)에서 직접 열어보세요.');
+  }
+</script>
+
+</body>
+</html>
